@@ -4,7 +4,7 @@ EPOCH=$(date +%s)
 FROM=$1
 RECIPIENT=$2
 TAG=JP-RELAY-TEST
-BODY="$TAG to (${RECIPIENT}:${EPOCH})"
+BODY="$TAG to <${RECIPIENT}> (${EPOCH})"
 
 USAGE="USAGE: send_check_mailrelay.sh [FROM] [RECIPIENT]"
 
