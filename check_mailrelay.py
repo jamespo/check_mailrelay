@@ -14,6 +14,7 @@
 from email.header import make_header, decode_header
 import os
 import re
+import socket
 import sys
 import imaplib
 import email
@@ -45,6 +46,12 @@ def readconf(account, confpath=os.path.expanduser('~/.config/.check_mailrelay.co
     return account_conf
 
 
+def debugpr(msg):
+    '''print debug msgs'''
+    if DEBUG:
+        print(msg)
+
+
 class IMAPSubjFind():
     '''searches for matching emails in IMAP account'''
     def __init__(self, user, pw, server, folder, subj_tag):
@@ -57,6 +64,7 @@ class IMAPSubjFind():
 
     def connect(self):
         '''connect to the mailserver'''
+        debugpr('connect (timeout: %s)' % socket.getdefaulttimeout())
         self.mailconn = imaplib.IMAP4_SSL(self.server)
         if 'AUTH=CRAM-MD5' in self.mailconn.capabilities:
             # use cram_md5 for auth
@@ -87,36 +95,36 @@ class IMAPSubjFind():
             unread = match_msgids[0].decode(encoding="utf-8", errors='replace')
             if unread == '':
                 # no new mails found
-                if DEBUG:
-                    print('No new mails found')
+                debugpr('No new mails found')
             else:
                 # new mails found
-                if DEBUG:
-                    print('New mails found')
+                debugpr('New mails found: %s' % unread)
+                # TODO: loop round mails & validate more, delete if necessary
                 match_msgids_arr = unread.split(' ')
         else:
             raise imaplib.IMAP4.error()
 
-    # TODO: required?
-    @staticmethod
-    def clean_subject(subj):
-        '''decode subject if in unicode format'''
-        subj = IMAPSubjFind.unicode_to_str(subj)
-        # remove newlines
-        subj = subj.replace('\r', '')
-        subj = subj.replace('\n', '')
-        return subj
+    # # TODO: required?
+    # @staticmethod
+    # def clean_subject(subj):
+    #     '''decode subject if in unicode format'''
+    #     subj = IMAPSubjFind.unicode_to_str(subj)
+    #     # remove newlines
+    #     subj = subj.replace('\r', '')
+    #     subj = subj.replace('\n', '')
+    #     return subj
 
-    @staticmethod
-    def unicode_to_str(header):
-        '''convert unicode header to plain str if required'''
-        return str(make_header(decode_header(header)))
+    # @staticmethod
+    # def unicode_to_str(header):
+    #     '''convert unicode header to plain str if required'''
+    #     return str(make_header(decode_header(header)))
 
 
 def main():
     '''load options, start check threads and display results'''
     cmd_options = getopts()
     config = readconf(cmd_options.account)
+    socket.setdefaulttimeout(10)  # IMAP server connections
     imapfind = IMAPSubjFind(config['user'], config['password'], config['server'],
                             config['folder'], cmd_options.subj_tag)
     imapfind.checknew()
